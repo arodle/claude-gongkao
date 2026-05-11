@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  base: '/skill-map-platform/',
+  base: '/claude-gongkao/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
