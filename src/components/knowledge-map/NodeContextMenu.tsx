@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { KnowledgeNode } from '../../types'
 
@@ -13,7 +12,6 @@ interface Props {
 
 export function NodeContextMenu({ node, x, y, onClose, setDrawerNode }: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
-  const navigate = useNavigate()
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

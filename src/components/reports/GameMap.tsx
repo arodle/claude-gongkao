@@ -16,7 +16,7 @@ export function GameMap() {
     .sort((a, b) => a.ps_score - b.ps_score) // 薄弱优先
 
   const masteredCount = nodes.filter((n) => n.ps_score >= 150).length
-  const progress = totalNodes => totalNodes > 0 ? Math.round((masteredCount / totalNodes) * 100) : 0
+  const progress = (total: number) => total > 0 ? Math.round((masteredCount / total) * 100) : 0
 
   return (
     <div className="h-full overflow-y-auto p-4 sm:p-6">

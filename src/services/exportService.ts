@@ -15,13 +15,6 @@ export async function exportAllData(): Promise<void> {
     db.questions.toArray(),
   ])
 
-  const backupFile: BackupFile = {
-    knowledge_nodes: knowledgeNodes,
-    practice_records: practiceRecords,
-    ps_history: psHistory,
-    questions,
-  }
-
   const dateStr = new Date().toISOString().slice(0, 10)
 
   // JSON 备份（含中文键名映射，便于人工可读）

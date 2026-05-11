@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useApp } from '../../context/AppContext'
 import { useToast } from '../shared/Toast'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
@@ -10,11 +8,11 @@ import { db } from '../../db/database'
 import { formatDateTime } from '../../utils/helpers'
 
 export function DataManagement() {
-  const navigate = useNavigate()
   const { toast } = useToast()
   const { nodes, records, psHistory, questions, snapshots, refreshNodes, refreshRecords, refreshQuestions, refreshPSHistory } = useApp()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const questionFileRef = useRef<HTMLInputElement>(null)
+  const restoreFileRef = useRef<File | null>(null)
 
   // 对话框状态
   const [restoreDialog, setRestoreDialog] = useState<{ type: 'file' | 'server' | 'snapshot'; id?: string } | null>(null)
@@ -37,8 +35,10 @@ export function DataManagement() {
     }
   }
 
-  // 从上传文件恢复
-  const handleFileRestore = async (file: File) => {
+  const handleFileRestore = async () => {
+    const file = restoreFileRef.current
+    if (!file) return
+
     try {
       let backupData
       if (file.name.endsWith('.zip')) {
@@ -63,6 +63,7 @@ export function DataManagement() {
 
       await Promise.all([refreshNodes(), refreshRecords(), refreshQuestions(), refreshPSHistory()])
       toast(`恢复成功！已恢复 ${backupData.knowledge_nodes.length} 个节点`, 'success')
+      setRestoreDialog(null)
     } catch (err) {
       toast('恢复失败：' + (err as Error).message, 'error')
     }
@@ -244,7 +245,10 @@ export function DataManagement() {
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0]
-                if (file) setRestoreDialog({ type: 'file' })
+                if (file) {
+                  restoreFileRef.current = file
+                  setRestoreDialog({ type: 'file' })
+                }
                 e.target.value = ''
               }}
             />
@@ -308,11 +312,7 @@ export function DataManagement() {
         message="当前所有数据将被备份文件中的数据覆盖，此操作不可撤销。确定继续吗？"
         confirmLabel="确认恢复"
         danger
-        onConfirm={() => {
-          const file = fileInputRef.current
-          // 需要存储文件引用
-          setRestoreDialog(null)
-        }}
+        onConfirm={handleFileRestore}
         onCancel={() => setRestoreDialog(null)}
       />
 

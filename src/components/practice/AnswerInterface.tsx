@@ -11,7 +11,7 @@ import type { Question, ScenarioType } from '../../types'
 export function AnswerInterface() {
   const { mode } = useParams<{ mode: string }>()
   const navigate = useNavigate()
-  const { nodes, questions, updateNodePS, addPracticeRecord, addPSHistory, isOnline } = useApp()
+  const { nodes, questions, updateNodePS, addPracticeRecord, addPSHistory } = useApp()
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
@@ -41,11 +41,9 @@ export function AnswerInterface() {
   }, [mode, nodes, questions])
 
   const [qList, setQList] = useState<Question[]>([])
-  const [examStartTime, setExamStartTime] = useState(Date.now())
 
   useEffect(() => {
     setQList(questionList())
-    setExamStartTime(Date.now())
     setCurrentIndex(0)
     setSubmitted(false)
     setSelectedAnswer(null)
@@ -54,8 +52,6 @@ export function AnswerInterface() {
   const currentQuestion = qList[currentIndex]
   const isExam = mode === 'exam'
   const totalQuestions = qList.length
-
-  const scenarioCoefficient = isExam ? 1.5 : 1.0
 
   const handleSubmit = useCallback(async () => {
     if (!currentQuestion || selectedAnswer === null || submitted) return
