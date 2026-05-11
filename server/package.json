@@ -1,0 +1,14 @@
+{
+  "name": "skill-map-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "sql.js": "^1.12.0"
+  }
+}
