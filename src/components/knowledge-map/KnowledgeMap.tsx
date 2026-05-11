@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { Graph } from '@antv/g6'
 import { useApp } from '../../context/AppContext'
 import { getHeatColor } from '../../utils/helpers'
@@ -7,13 +7,6 @@ import { NodeContextMenu } from './NodeContextMenu'
 import { MapControls } from './MapControls'
 import { FlyAnimation } from './FlyAnimation'
 import type { KnowledgeNode } from '../../types'
-import { useState } from 'react'
-
-interface G6Node {
-  id: string
-  data: KnowledgeNode
-  style?: Record<string, unknown>
-}
 
 export function KnowledgeMap() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -154,15 +147,14 @@ export function KnowledgeMap() {
     (window as any).__triggerFlyAnimation = (fromX: number, fromY: number, toNodeId: string) => {
       const targetNode = nodes.find((n) => n.id === toNodeId)
       if (targetNode && graphRef.current) {
-        // 获取目标节点在画布上的位置
         try {
-          const pos = graphRef.current.getNodePosition(toNodeId)
-          setFlyAnim({ fromX: pos[0], fromY: pos[1], toNodeId })
-          // 触发高亮
-          setTimeout(() => {
-            graphRef.current?.setNodeState(toNodeId, 'highlight', true)
-            setTimeout(() => graphRef.current?.setNodeState(toNodeId, 'highlight', false), 800)
-          }, 600)
+          const graph = graphRef.current as any
+          const nodeData = graph.getNodeData(toNodeId)
+          if (nodeData?.style) {
+            setFlyAnim({ fromX: nodeData.style.x ?? fromX, fromY: nodeData.style.y ?? fromY, toNodeId })
+          } else {
+            setFlyAnim({ fromX, fromY, toNodeId })
+          }
         } catch {
           setFlyAnim({ fromX, fromY, toNodeId })
         }
