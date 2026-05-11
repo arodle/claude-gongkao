@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>合并变更可视化 - trae/solo-agent-gLqwVu → origin/master</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --bg-card: #1c2128;
+      --border: #30363d;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-green: #3fb950;
+      --accent-red: #f85149;
+      --accent-blue: #58a6ff;
+      --accent-purple: #a371f7;
+      --accent-orange: #d29922;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .noise-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.03;
+      z-index: 1000;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      position: relative;
+    }
+
+    .branch-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .branch-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .branch-badge.source {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .branch-badge.target {
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    .arrow-icon {
+      color: var(--text-muted);
+      font-size: 20px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .summary-card {
+      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent-green), var(--accent-blue), var(--accent-purple));
+    }
+
+    .summary-card h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .summary-text {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--text-primary);
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-blue);
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .files-section h2 {
+      font-size: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .files-section h2::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: var(--accent-green);
+      border-radius: 2px;
+    }
+
+    .file-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .file-card:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .file-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .file-path {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    .file-icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .file-ext {
+      color: var(--accent-purple);
+    }
+
+    .change-count {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: var(--bg-tertiary);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    .expand-icon {
+      color: var(--text-muted);
+      transition: transform 0.3s ease;
+    }
+
+    .file-card.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    .file-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .file-card.expanded .file-content {
+      max-height: 2000px;
+    }
+
+    .change-list {
+      padding: 20px;
+    }
+
+    .change-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .change-item:last-child {
+      border-bottom: none;
+    }
+
+    .change-bullet {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-red);
+      border-radius: 50%;
+      margin-top: 7px;
+      flex-shrink: 0;
+    }
+
+    .change-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.deletion {
+      background: var(--accent-red);
+    }
+
+    .legend-dot.addition {
+      background: var(--accent-green);
+    }
+
+    .legend-dot.modification {
+      background: var(--accent-blue);
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 24px 16px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .branch-info {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .stats-row {
+        flex-direction: column;
+      }
+
+      .stat-card {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise-overlay"></div>
+
+  <div class="container">
+    <header>
+      <div class="branch-info">
+        <span class="branch-badge source">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zm-2.25.75a2.25 2.25 0 1 1 3 2.122V6A2.5 2.5 0 0 1 10 8.5H6a1 1 0 0 0-1 1v1.128a2.251 2.251 0 1 1-1.5 0V5.372a2.25 2.25 0 1 1 1.5 0v1.836A2.492 2.492 0 0 1 6 7h4a1 1 0 0 0 1-1v-.628A2.25 2.25 0 0 1 9.5 3.25zM4.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5zM3.5 3.25a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0z"/>
+          </svg>
+          trae/solo-agent-gLqwVu
+        </span>
+        <span class="arrow-icon">→</span>
+        <span class="branch-badge target">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 12.5v-10z"/>
+          </svg>
+          origin/master
+        </span>
+      </div>
+      <h1>合并变更摘要报告</h1>
+      <p class="subtitle">分支合并于 2026-05-11</p>
+    </header>
+
+    <div class="summary-card">
+      <h2>总体概述</h2>
+      <p class="summary-text">
+        此次合并主要清理了代码库中的未使用导入和变量，简化了知识图谱组件的数据获取逻辑，并优化了数据恢复功能。整体上是一次代码质量和维护性的改进，涉及 7 个文件的变更。
+      </p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-number">7</div>
+        <div class="stat-label">变更文件数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">14</div>
+        <div class="stat-label">删除变更数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">4</div>
+        <div class="stat-label">修改变更数</div>
+      </div>
+    </div>
+
+    <section class="files-section">
+      <h2>文件级详细变更</h2>
+
+      <div class="file-card expanded">
+        <div class="file-header" onclick="toggleFile(this)">
+          <span class="file-path">
+            <span class="file-icon">📦</span>
+            <span class="file-ext">package-lock.json</span>
+          </span>
+          <span class="change-count">1 项变更</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="file-content">
+          <div class="change-list">
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">移除了多个平台依赖包中的 libc 字段配置（glibc/musl），简化了依赖声明</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="file-card expanded">
+        <div class="file-header" onclick="toggleFile(this)">
+          <span class="file-path">
+            <span class="file-icon">⚛️</span>
+            <span class="file-ext">KnowledgeMap.tsx</span>
+          </span>
+          <span class="change-count">3 项变更</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="file-content">
+          <div class="change-list">
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">优化导入语句，将 useState 移至主导入，减少重复导入</span>
+            </div>
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">删除了未使用的 G6Node 接口定义，清理冗余类型声明</span>
+            </div>
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">重构飞行动画逻辑，使用新版 G6 API 的 getNodeData 替代 getNodePosition，提升数据获取稳定性</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="file-card">
+        <div class="file-header" onclick="toggleFile(this)">
+          <span class="file-path">
+            <span class="file-icon">⚛️</span>
+            <span class="file-ext">NodeContextMenu.tsx</span>
+          </span>
+          <span class="change-count">1 项变更</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="file-content">
+          <div class="change-list">
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">移除了未使用的 useNavigate 导入，减少无用代码</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="file-card">
+        <div class="file-header" onclick="toggleFile(this)">
+          <span class="file-path">
+            <span class="file-icon">⚛️</span>
+            <span class="file-ext">AnswerInterface.tsx</span>
+          </span>
+          <span class="change-count">3 项变更</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="file-content">
+          <div class="change-list">
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">移除了未使用的 isOnline 从上下文解构，简化组件依赖</span>
+            </div>
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">删除了 examStartTime 状态及相关逻辑，移除考试计时相关功能</span>
+            </div>
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">删除了未使用的 scenarioCoefficient 变量</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="file-card">
+        <div class="file-header" onclick="toggleFile(this)">
+          <span class="file-path">
+            <span class="file-icon">⚛️</span>
+            <span class="file-ext">GameMap.tsx</span>
+          </span>
+          <span class="change-count">1 项变更</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="file-content">
+          <div class="change-list">
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">修正了 progress 函数参数命名从 totalNodes 改为 total，提升代码可读性</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="file-card expanded">
+        <div class="file-header" onclick="toggleFile(this)">
+          <span class="file-path">
+            <span class="file-icon">⚛️</span>
+            <span class="file-ext">DataManagement.tsx</span>
+          </span>
+          <span class="change-count">4 项变更</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="file-content">
+          <div class="change-list">
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">移除了未使用的 useNavigate 和 motion 导入</span>
+            </div>
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">重构文件恢复逻辑，使用 ref 存储文件引用以解决闭包问题</span>
+            </div>
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">修复恢复确认对话框正确调用 handleFileRestore 函数</span>
+            </div>
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">添加恢复完成后关闭对话框的逻辑</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="file-card">
+        <div class="file-header" onclick="toggleFile(this)">
+          <span class="file-path">
+            <span class="file-icon">📄</span>
+            <span class="file-ext">exportService.ts</span>
+          </span>
+          <span class="change-count">1 项变更</span>
+          <span class="expand-icon">▼</span>
+        </div>
+        <div class="file-content">
+          <div class="change-list">
+            <div class="change-item">
+              <span class="change-bullet"></span>
+              <span class="change-text">移除了未使用的 backupFile 变量声明</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-dot deletion"></span>
+        删除/清理
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot modification"></span>
+        重构/修改
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot addition"></span>
+        新增/修复
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleFile(header) {
+      const card = header.parentElement;
+      card.classList.toggle('expanded');
+    }
+  </script>
+</body>
+</html>
